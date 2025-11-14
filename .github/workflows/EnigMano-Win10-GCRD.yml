@@ -1,4 +1,4 @@
-name: "EnigMano — GCRD Automation (No Secret)"
+name: "EnigMano — GCRD Automation (Minimal)"
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   crd-register:
-    name: "EnigMano Windows 10"
+    name: "EnigMano GCRD Only"
     runs-on: windows-2022
     env:
       RAW_CODE: ${{ github.event.inputs.CODE }}
@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
 
     steps:
-      - name: "Environment Summary (with quiet preload)"
+      - name: "Environment Summary & Preload"
         run: |
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
@@ -59,17 +59,14 @@ jobs:
             $dlAttempts = [Math]::Max(3, $retries)
             $assets = @(
               @{ Url = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Name = "crdhost.msi" },
-              @{ Url = "https://downloads.cloudflareclient.com/v1/download/windows/ga"; Name = "Cloudflare_WARP_x64.msi" },
-              @{ Url = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"; Name = "VBCABLE.zip" },
-              @{ Url = "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user"; Name = "VisualStudio.exe" },
-              @{ Url = "https://nodejs.org/dist/v24.11.0/node-v24.11.0-x64.msi"; Name = "node-v24.msi" }
+              @{ Url = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"; Name = "VBCABLE.zip" }
             )
             function Download-Quiet([string]$Url,[string]$OutFile,[int]$Attempts) {
               for ($i=1; $i -le $Attempts; $i++) {
                 try {
                   Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing -TimeoutSec 120
                   if ((Test-Path -LiteralPath $OutFile) -and ((Get-Item $OutFile).Length -gt 0)) { return }
-                  throw "Downloaded file missing or zero-size."
+                  throw "File missing or zero-size."
                 } catch {
                   if ($i -eq $Attempts) { throw }
                   Start-Sleep -Seconds ([int][Math]::Min(20, ($i * 2)))
@@ -85,28 +82,27 @@ jobs:
             Write-Error "Preload failed: $($_.Exception.Message)"
           }
 
-      - name: "EnigMano Magical Setup & Execution"
+      - name: "EnigMano GCRD Setup"
         id: setup
         run: |
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           try {
-            $url = "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1"
-            Invoke-WebRequest -Uri $url -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
-            if (-not (Test-Path "./source.ps1")) {
-              Write-Error "Failed to download source.ps1"
+            $url = "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/EnigMano-GCRD-Instance.ps1"
+            Invoke-WebRequest -Uri $url -OutFile "EnigMano-GCRD-Instance.ps1" -UseBasicParsing -TimeoutSec 120
+            if (-not (Test-Path "./EnigMano-GCRD-Instance.ps1")) {
+              Write-Error "Failed to download EnigMano-GCRD-Instance.ps1"
               exit 1
             }
 
-            # Run without GateSecret
-            powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" `
+            powershell.exe -ExecutionPolicy Bypass -File ".\EnigMano-GCRD-Instance.ps1" `
               -Code ($env:RAW_CODE) `
               -Pin ($env:PIN_INPUT) `
               -Retries ($env:RETRIES_INPUT)
 
             Write-Host "==============================================="
-            Write-Host "EnigMano Windows 10 (Sound Enabled)"
+            Write-Host "EnigMano GCRD (Sound Enabled)"
             Write-Host "https://www.youtube.com/@ShahzaibYT-itxsb"
             Write-Host "Powered by: Shahzaib-YT"
             Write-Host "==============================================="
