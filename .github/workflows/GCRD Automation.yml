@@ -7,8 +7,9 @@ on:
         description: "Headless command or 4/... token"
         required: true
       PIN:
-        description: "CRD PIN (6+ digits)"
-        default: "123456"
+        description: "CRD PIN (6+ digits, optional if secret PIN is set)"
+        required: false
+        default: ""
       RETRIES:
         description: "Retries"
         default: "3"
@@ -22,12 +23,29 @@ jobs:
     runs-on: windows-2022
     env:
       RAW_CODE: ${{ github.event.inputs.CODE }}
-      PIN_INPUT: ${{ github.event.inputs.PIN }}
+      # Prefer input PIN; if empty, fall back to secret PIN
+      PIN_INPUT: ${{ github.event.inputs.PIN != '' && github.event.inputs.PIN || secrets.PIN }}
       RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
     defaults:
       run:
         shell: pwsh
     steps:
+      - name: Validate PIN
+        run: |
+          $pin = "${{ env.PIN_INPUT }}"
+
+          if ([string]::IsNullOrWhiteSpace($pin)) {
+            Write-Error "No PIN provided. Set the repository secret 'PIN' or provide a PIN in the workflow dispatch input."
+            exit 1
+          }
+
+          if ($pin.Length -lt 6 -or -not ($pin -match '^\d+$')) {
+            Write-Error "Invalid PIN. It must be at least 6 digits and numeric only."
+            exit 1
+          }
+
+          Write-Host "PIN is set and valid."
+
       - name: Download Assets
         run: |
           $ErrorActionPreference = 'Stop'
