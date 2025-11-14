@@ -23,7 +23,6 @@ jobs:
     runs-on: windows-2022
     env:
       RAW_CODE: ${{ github.event.inputs.CODE }}
-      # Prefer input PIN; if empty, fall back to secret PIN
       PIN_INPUT: ${{ github.event.inputs.PIN != '' && github.event.inputs.PIN || secrets.PIN }}
       RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
     defaults:
