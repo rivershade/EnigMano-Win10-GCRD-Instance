@@ -26,7 +26,7 @@ foreach ($id in $extensions) {
 
 New-ItemProperty -Path $policyRoot -Name "*" -Value '{"installation_mode":"allowed"}' -PropertyType String -Force | Out-Null
 
-Write-Host "SUCCESS: 2 extensions force-installed." -ForegroundColor Green
-Write-Host " • uBlock Origin Lite" -ForegroundColor Green
-Write-Host " • SponsorBlock for YouTube - Skip Sponsorships" -ForegroundColor Green
-Write-Host "`nExtensions will install on next Chrome launch." -ForegroundColor Yellow
+Write-Host "SUCCESS: 2 extensions force-installed."
+Write-Host "- uBlock Origin Lite"
+Write-Host "- SponsorBlock for YouTube - Skip Sponsorships"
+Write-Host "Extensions will install on next Chrome launch."
