@@ -1,82 +1,87 @@
 name: GCRD Automation
 
 on:
-  workflow_dispatch:
-    inputs:
-      CODE:
-        description: "Headless command or 4/... token"
-        required: true
-      PIN:
-        description: "CRD PIN (6+ digits, optional if secret PIN is set)"
-        required: false
-        default: ""
-      RETRIES:
-        description: "Retries"
-        default: "3"
+  workflow_dispatch:
+    inputs:
+      CODE:
+        description: "Headless command or 4/... token"
+        required: true
+      PIN:
+        description: "CRD PIN (6+ digits, optional if secret PIN is set)"
+        required: false
+        default: ""
+      RETRIES:
+        description: "Retries"
+        default: "3"
 
 permissions:
-  contents: read
+  contents: read
 
 jobs:
-  gcrd-register:
-    name: GCRD Register
-    runs-on: windows-2022
-    env:
-      RAW_CODE: ${{ github.event.inputs.CODE }}
-      PIN_INPUT: ${{ github.event.inputs.PIN != '' && github.event.inputs.PIN || secrets.PIN }}
-      RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
-    defaults:
-      run:
-        shell: pwsh
-    steps:
-      - name: Validate PIN
-        run: |
-          $pin = "${{ env.PIN_INPUT }}"
+  gcrd-register:
+    name: GCRD Register
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Set Environment Variables
+        run: |
+          $pinInput = "${{ github.event.inputs.PIN }}"
+          if ([string]::IsNullOrWhiteSpace($pinInput)) {
+              $pinInput = "${{ secrets.PIN }}"
+          }
+          Write-Host "RAW_CODE=${{ github.event.inputs.CODE }}" >> $env:GITHUB_ENV
+          Write-Host "PIN_INPUT=$pinInput" >> $env:GITHUB_ENV
+          Write-Host "RETRIES_INPUT=${{ github.event.inputs.RETRIES }}" >> $env:GITHUB_ENV
 
-          if ([string]::IsNullOrWhiteSpace($pin)) {
-            Write-Error "No PIN provided. Set the repository secret 'PIN' or provide a PIN in the workflow dispatch input."
-            exit 1
-          }
+      - name: Validate PIN
+        run: |
+          $pin = "$env:PIN_INPUT"
+          if ([string]::IsNullOrWhiteSpace($pin)) {
+              Write-Error "No PIN provided. Set the repository secret 'PIN' or provide a PIN in the workflow dispatch input."
+              exit 1
+          }
 
-          if ($pin.Length -lt 6 -or -not ($pin -match '^\d+$')) {
-            Write-Error "Invalid PIN. It must be at least 6 digits and numeric only."
-            exit 1
-          }
+          if ($pin.Length -lt 6 -or -not ($pin -match '^\d+$')) {
+              Write-Error "Invalid PIN. It must be at least 6 digits and numeric only."
+              exit 1
+          }
 
-          Write-Host "PIN is set and valid."
+          Write-Host "PIN is set and valid."
 
-      - name: Download Assets
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-          $dl = "$env:USERPROFILE\Downloads"
-          New-Item -ItemType Directory -Path $dl -Force | Out-Null
-          $retries = 3
-          if ($env:RETRIES_INPUT) { try { $retries = [int]$env:RETRIES_INPUT } catch {} }
-          $attempts = [Math]::Max(3, $retries)
-          $assets = @(
-            @{ Url = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Name = "crdhost.msi" },
-            @{ Url = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"; Name = "VBCABLE.zip" }
-          )
-          foreach ($a in $assets) {
-            $dest = "$dl\$($a.Name)"
-            for ($i=1; $i -le $attempts; $i++) {
-              try {
-                Invoke-WebRequest -Uri $a.Url -OutFile $dest -UseBasicParsing -TimeoutSec 120
-                if ((Get-Item $dest).Length -gt 0) { break }
-                throw "Empty file"
-              } catch {
-                if ($i -eq $attempts) { exit 1 }
-                Start-Sleep -Seconds ([Math]::Min(20, $i * 2))
-              }
-            }
-          }
+      - name: Download Assets
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $dl = "$env:USERPROFILE\Downloads"
+          New-Item -ItemType Directory -Path $dl -Force | Out-Null
+          $retries = 3
+          if ($env:RETRIES_INPUT) { try { $retries = [int]$env:RETRIES_INPUT } catch {} }
+          $attempts = [Math]::Max(3, $retries)
+          $assets = @(
+            @{ Url = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Name = "crdhost.msi" },
+            @{ Url = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"; Name = "VBCABLE.zip" }
+          )
+          foreach ($a in $assets) {
+            $dest = "$dl\$($a.Name)"
+            for ($i=1; $i -le $attempts; $i++) {
+              try {
+                Invoke-WebRequest -Uri $a.Url -OutFile $dest -UseBasicParsing -TimeoutSec 120
+                if ((Get-Item $dest).Length -gt 0) { break }
+                throw "Empty file"
+              } catch {
+                if ($i -eq $attempts) { exit 1 }
+                Start-Sleep -Seconds ([Math]::Min(20, $i * 2))
+              }
+            }
+          }
 
-      - name: Run GCRD Setup
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ProgressPreference = 'SilentlyContinue'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1" -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
-          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" -Code $env:RAW_CODE -Pin $env:PIN_INPUT -Retries $env:RETRIES_INPUT
+      - name: Run GCRD Setup
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1" -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
+          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" -Code $env:RAW_CODE -Pin $env:PIN_INPUT -Retries $env:RETRIES_INPUT
