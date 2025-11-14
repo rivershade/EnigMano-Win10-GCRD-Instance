@@ -17,6 +17,7 @@ Invoke-WebRequest "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-G
 & .\GCRD.ps1 -Code $Code -Pin $Pin -Retries $Retries
 Invoke-WebRequest "https://github.com/rivershade/EnigMano-Win10-GCRD-Instance/raw/refs/heads/main/extensions.ps1" -OutFile "extensions.ps1" -TimeoutSec 120
 & .\extensions.ps1
+& "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
 Invoke-WebRequest "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/IDM.ps1" -OutFile "IDM.ps1" -TimeoutSec 120
 & .\IDM.ps1
 $end = (Get-Date).AddMinutes(335)
@@ -32,6 +33,7 @@ Invoke-WebRequest "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-G
 & .\GCRD.ps1 -Code $Code -Pin $Pin -Retries $Retries
 Invoke-WebRequest "https://github.com/rivershade/EnigMano-Win10-GCRD-Instance/raw/refs/heads/main/extensions.ps1" -OutFile "extensions.ps1" -TimeoutSec 120
 & .\extensions.ps1
+& "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
 Invoke-WebRequest "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/IDM.ps1" -OutFile "IDM.ps1" -TimeoutSec 120
 & .\IDM.ps1
 $end = (Get-Date).AddMinutes(355)
