@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 jobs:
-  crd-register:
+  GCRD Register:
     runs-on: windows-2022
     env:
       RAW_CODE: ${{ github.event.inputs.CODE }}
