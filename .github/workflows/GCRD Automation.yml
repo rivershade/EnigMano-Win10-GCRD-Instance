@@ -14,12 +14,9 @@ on:
 permissions:
   contents: read
 jobs:
-   GCRD Register:
+  gcrd-register:
+    name: GCRD Register
     runs-on: windows-2025
-    env:
-      RAW_CODE: ${{ github.event.inputs.CODE }}
-      PIN_INPUT: ${{ github.event.inputs.PIN }}
-      RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
     defaults:
       run:
         shell: pwsh
@@ -32,7 +29,7 @@ jobs:
           $dl = "$env:USERPROFILE\Downloads"
           New-Item -ItemType Directory -Path $dl -Force | Out-Null
           $retries = 3
-          if ($env:RETRIES_INPUT) { try { $retries = [int]$env:RETRIES_INPUT } catch {} }
+          if ($env:RETRIES) { try { $retries = [int]$env:RETRIES } catch {} }
           $attempts = [Math]::Max(3, $retries)
           $assets = @(
             @{ Url = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Name = "crdhost.msi" },
@@ -57,4 +54,4 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1" -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
-          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" -Code $env:RAW_CODE -Pin $env:PIN_INPUT -Retries $env:RETRIES_INPUT
+          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" -Code "${{ github.event.inputs.CODE }}" -Pin "${{ github.event.inputs.PIN }}" -Retries "${{ github.event.inputs.RETRIES }}"
