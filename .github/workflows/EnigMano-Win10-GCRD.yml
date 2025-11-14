@@ -1,113 +1,60 @@
-name: "EnigMano — GCRD Automation (Minimal)"
-
+name: GCRD Automation
 on:
   workflow_dispatch:
     inputs:
       CODE:
-        description: "Full headless command or just the 4/... token from https://remotedesktop.google.com/headless"
+        description: "Headless command or 4/... token"
         required: true
       PIN:
-        description: "CRD PIN (6+ digits). Default 123456"
-        required: false
+        description: "CRD PIN (6+ digits)"
         default: "123456"
       RETRIES:
-        description: "Retries for start-host (default 3)"
-        required: false
+        description: "Retries"
         default: "3"
-
 permissions:
   contents: read
-
-concurrency:
-  group: crd-register-${{ github.ref }}-${{ github.run_id }}
-  cancel-in-progress: false
-
 jobs:
   crd-register:
-    name: "EnigMano GCRD Only"
     runs-on: windows-2022
     env:
       RAW_CODE: ${{ github.event.inputs.CODE }}
       PIN_INPUT: ${{ github.event.inputs.PIN }}
       RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
-      BRANCH: ${{ github.ref_name }}
-      RUNNER_ENV: "hosted"
     defaults:
       run:
         shell: pwsh
-
     steps:
-      - name: "Environment Summary & Preload"
+      - name: Download Assets
         run: |
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-          Write-Host "==============================================="
-          Write-Host "OS Version : $env:ImageOS"
-          Write-Host "Runner Machine : $env:RUNNER_NAME"
-          Write-Host "Repository : $env:GITHUB_REPOSITORY"
-          Write-Host "Branch/Ref : $env:BRANCH"
-          Write-Host "Workflow Run ID : $env:GITHUB_RUN_ID"
-          Write-Host "==============================================="
-          if ($env:RAW_CODE) { Write-Host "::add-mask::$($env:RAW_CODE)" }
-          if ($env:PIN_INPUT) { Write-Host "::add-mask::$($env:PIN_INPUT)" }
-
-          # ---- Download assets -------------------------------------------------
-          $userDownloads = Join-Path $env:USERPROFILE 'Downloads'
-          if (-not (Test-Path $userDownloads)) { New-Item -ItemType Directory -Path $userDownloads | Out-Null }
-
+          $dl = "$env:USERPROFILE\Downloads"
+          New-Item -ItemType Directory -Path $dl -Force | Out-Null
           $retries = 3
           if ($env:RETRIES_INPUT) { try { $retries = [int]$env:RETRIES_INPUT } catch {} }
-          $dlAttempts = [Math]::Max(3, $retries)
-
+          $attempts = [Math]::Max(3, $retries)
           $assets = @(
             @{ Url = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"; Name = "crdhost.msi" },
             @{ Url = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"; Name = "VBCABLE.zip" }
           )
-
-          function Download-Quiet([string]$Url,[string]$OutFile,[int]$Attempts) {
-            for ($i=1; $i -le $Attempts; $i++) {
+          foreach ($a in $assets) {
+            $dest = "$dl\$($a.Name)"
+            for ($i=1; $i -le $attempts; $i++) {
               try {
-                Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing -TimeoutSec 120
-                if ((Test-Path -LiteralPath $OutFile) -and ((Get-Item $OutFile).Length -gt 0)) { return }
-                throw "File missing or zero-size."
+                Invoke-WebRequest -Uri $a.Url -OutFile $dest -UseBasicParsing -TimeoutSec 120
+                if ((Get-Item $dest).Length -gt 0) { break }
+                throw "Empty file"
               } catch {
-                if ($i -eq $Attempts) { throw }
-                Start-Sleep -Seconds ([int][Math]::Min(20, ($i * 2)))
+                if ($i -eq $attempts) { exit 1 }
+                Start-Sleep -Seconds ([Math]::Min(20, $i * 2))
               }
             }
           }
-
-          foreach ($a in $assets) {
-            $dest = Join-Path $userDownloads $a.Name
-            Download-Quiet -Url $a.Url -OutFile $dest -Attempts $dlAttempts
-          }
-          Write-Host "Save location: $userDownloads"
-
-      - name: "EnigMano GCRD Setup"
-        id: setup
+      - name: Run GCRD Setup
         run: |
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-          # ---- Download main script --------------------------------------------
-          $url = "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1"
-          Invoke-WebRequest -Uri $url -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
-          if (-not (Test-Path "./source.ps1")) {
-            Write-Error "Failed to download source.ps1"
-            exit 1
-          }
-
-          # ---- Run the script --------------------------------------------------
-          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" `
-            -Code ($env:RAW_CODE) `
-            -Pin ($env:PIN_INPUT) `
-            -Retries ($env:RETRIES_INPUT)
-
-          Write-Host "==============================================="
-          Write-Host "EnigMano GCRD (Sound Enabled)"
-          Write-Host "https://www.youtube.com/@ShahzaibYT-itxsb"
-          Write-Host "Powered by: Shahzaib-YT"
-          Write-Host "==============================================="
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1" -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
+          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" -Code $env:RAW_CODE -Pin $env:PIN_INPUT -Retries $env:RETRIES_INPUT
