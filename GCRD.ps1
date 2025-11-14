@@ -111,16 +111,6 @@ if (Test-Path -LiteralPath $hostJson) {
   Log "Already registered. Skipping."
   exit 0
 }
-function Show-FilteredStderr([string]$stderr, [int]$exitCode) {
-  if ([string]::IsNullOrWhiteSpace($stderr)) { Write-Host "STDERR: (empty)"; return }
-  $lines = $stderr -split "`r?`n"
-  if ($exitCode -eq 0) {
-    $filtered = $lines | Where-Object { $_ -notmatch 'INFO:' -and $_ -notmatch '^\s*$' }
-    if ($filtered) { Write-Host "STDERR (filtered):"; $filtered | Write-Host } else { Write-Host "STDERR: (INFO only)" }
-  } else {
-    Write-Host "STDERR:"; $lines | Write-Host
-  }
-}
 Mask $token
 Mask $Pin
 $codeEsc = Escape-Arg $token
