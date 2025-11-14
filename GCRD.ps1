@@ -143,9 +143,6 @@ for ($i = 1; $i -le $Attempts; $i++) {
     $stdout = $p.StandardOutput.ReadToEnd()
     $stderr = $p.StandardError.ReadToEnd()
     $p.WaitForExit()
-    Write-Host "STDOUT:"
-    if ([string]::IsNullOrWhiteSpace($stdout)) { Write-Host "(empty)" } else { Write-Host $stdout }
-    Show-FilteredStderr -stderr $stderr -exitCode $p.ExitCode
     Write-Host "ExitCode: $($p.ExitCode)"
     if ($p.ExitCode -eq 0) {
       $success = $true
