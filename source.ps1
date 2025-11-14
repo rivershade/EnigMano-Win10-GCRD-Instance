@@ -6,46 +6,39 @@
 # ============================================================
 
 param(
-    [string]$GateSecret  # Optional: pass as -GateSecret or via env:EnigMano_Access_Token
+    [Parameter(Mandatory)] [string]$Code,
+    [string]$Pin = "123456",
+    [string]$Retries = "3"
 )
 
 # ============================================================
 # CORE DIRECTIVE: SYSTEM INTEGRITY LOCKDOWN
-# Fail immediately on unhandled errors. No deviation. No mercy.
+# Fail immediately on unhandled errors.
 # ============================================================
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 # ============================================================
 # CHRONOMARK SYNCHRONIZER
-# Generates unified timestamps for deterministic event chains.
+# Unified timestamps for logs.
 # ============================================================
 function Timestamp { (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") }
 
 # ============================================================
 # TELEMETRY CONDUIT
-# Each message passes through the EnigMano console matrix.
+# All messages go through EnigMano console.
 # ============================================================
 function Log($msg)  { Write-Host "[ENIGMANO $(Timestamp)] $msg" }
 
 # ============================================================
 # TERMINUS GATE
-# All unrecoverable faults converge here for controlled collapse.
+# Critical failure handler.
 # ============================================================
 function Fail($msg) { Write-Error "[ENIGMANO-ERROR $(Timestamp)] $msg"; Exit 1 }
 
 # ============================================================
-# CRYPTIC HASH ENGINE
-# SHA-256 integrity seal generator. Local-only. Untouchable.
-# ============================================================
-function Get-Sha256([Parameter(Mandatory)] [string]$Text) {
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
-    $sha   = [System.Security.Cryptography.SHA256]::Create()
-    ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") }) -join ""
-}
-
-# ============================================================
 # BOOT IDENT SEQUENCE
-# Declare intent, provenance, and initiation timestamp.
+# Declare intent and initiation.
 # ============================================================
 $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 Write-Host @"
@@ -61,138 +54,120 @@ Write-Host @"
 "@
 
 # ============================================================
-# CONTEXT SNAPSHOT
-# Record non-sensitive runtime state for audit and replay.
+# INPUT VALIDATION
 # ============================================================
-$RUNNER_ENV     = $env:RUNNER_ENV
-$RAW_CODE       = $env:RAW_CODE
-$PIN_INPUT      = $env:PIN_INPUT
-$RETRIES_INPUT  = $env:RETRIES_INPUT
+if (-not $Code) { Fail "Missing required -Code parameter." }
+if ($Code.Trim().Length -lt 10) { Fail "Invalid CODE: too short. Must be full headless command or 4/... token." }
+if ($Pin.Length -lt 6) { $Pin = "123456" }
+try { [int]$Retries = [int]$Retries } catch { $Retries = 3 }
 
-# ============================================================
-# ACCESS CONTROL: GATE VERIFICATION
-# Purpose : Authenticate operator through EnigMano Key Seal.
-# Policy  : Token must resolve to approved cryptographic fingerprint.
-# ============================================================
-$GATE_SECRET = if ($PSBoundParameters.ContainsKey('GateSecret')) { $GateSecret } else { $env:EnigMano_Access_Token }
-
-if ($GATE_SECRET) { Write-Host "::add-mask::$GATE_SECRET" }
-$ExpectedSecretSHA256 = '9963bc90438cdc994401dec1010f4907ca2523eba67216f8c82ee8027b0ee230'
-
-if (-not $GATE_SECRET -or [string]::IsNullOrWhiteSpace($GATE_SECRET)) {
-    Fail "Access Gate Denied: Missing EnigMano_Access_Token. Configure repository secret and retry."
-}
-
-$actual = Get-Sha256 $GATE_SECRET
-if ($actual -ne $ExpectedSecretSHA256) {
-    Fail "Access Gate Denied: Token fingerprint mismatch. Lockdown enforced."
-}
-Log "Access Gate: Operator authentication verified and validated."
+Log "Input validated: Code=***, PIN=$Pin, Retries=$Retries"
 
 # ============================================================
 # PRIMARY DEPLOYMENT: SYSTEM FORGE
-# Each phase is a tactical operation. Each failure is terminal.
+# Each phase is a tactical operation.
 # ============================================================
 
 try {
     Log "Node LTS (~45s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Node-LTS.ps1" -OutFile Node-LTS.ps1
-    .\Node-LTS.ps1
-    Log "Node LTS - Forge completed successfully."
-} catch { Fail "Node LTS - Forge sequence failure. $_" }
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Node-LTS.ps1" -OutFile "Node-LTS.ps1" -TimeoutSec 120
+    & .\Node-LTS.ps1
+    Log "Node LTS - Forge completed."
+} catch { Fail "Node LTS failed: $($_.Exception.Message)" }
 
 try {
     Log "Visual Studio Code (~45s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Visual-Code.ps1" -OutFile Visual-Code.ps1
-    .\Visual-Code.ps1
-    Log "Visual Studio Code - Operator Core installed and aligned."
-} catch { Fail "Visual Studio Code - Core installation failure. $_" }
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Visual-Code.ps1" -OutFile "Visual-Code.ps1" -TimeoutSec 120
+    & .\Visual-Code.ps1
+    Log "Visual Studio Code - Installed."
+} catch { Fail "VS Code failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase Persona - Engaging Environment Protocols (~15s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Env-Personalization.ps1" -OutFile Env-Personalization.ps1
-    .\Env-Personalization.ps1
-    Log "Phase Persona - Visual and ergonomic hardening complete."
-} catch { Fail "Phase Persona - Execution failure. $_" }
+    Log "Phase Persona - Environment (~15s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Env-Personalization.ps1" -OutFile "Env-Personalization.ps1" -TimeoutSec 120
+    & .\Env-Personalization.ps1
+    Log "Persona - Hardened."
+} catch { Fail "Persona failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase Browser-Core - Manifesting Brave Shell (~40s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Brave-Browser.ps1" -OutFile Brave-Browser.ps1
-    .\Brave-Browser.ps1
-    Log "Phase Browser-Core - Brave aligned and operational."
-} catch { Fail "Phase Browser-Core - Operation failure. $_" }
+    Log "Brave Browser (~40s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Brave-Browser.ps1" -OutFile "Brave-Browser.ps1" -TimeoutSec 120
+    & .\Brave-Browser.ps1
+    Log "Brave - Operational."
+} catch { Fail "Brave failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase Browser-Extensions - Injecting augmentation suite (~25s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Browser-Extensions.ps1" -OutFile Browser-Extensions.ps1
-    .\Browser-Extensions.ps1
-    Log "Phase Browser-Extensions - Augmentation sequence complete."
-} catch { Fail "Phase Browser-Extensions - Failure detected. $_" }
+    Log "Browser Extensions (~25s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Browser-Extensions.ps1" -OutFile "Browser-Extensions.ps1" -TimeoutSec 120
+    & .\Browser-Extensions.ps1
+    Log "Extensions - Injected."
+} catch { Fail "Extensions failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase Browser-Env - Establishing runtime matrix (~55s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Browser-Env-Setup.ps1" -OutFile Browser-Env-Setup.ps1
-    .\Browser-Env-Setup.ps1
-    Log "Phase Browser-Env - Runtime context stabilized."
-} catch { Fail "Phase Browser-Env - Failure encountered. $_" }
+    Log "Browser Environment (~55s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Browser-Env-Setup.ps1" -OutFile "Browser-Env-Setup.ps1" -TimeoutSec 120
+    & .\Browser-Env-Setup.ps1
+    Log "Browser Env - Stabilized."
+} catch { Fail "Browser Env failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase Audio - Assembling virtual drivers (~120s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/VB-Audio.ps1" -OutFile VB-Audio.ps1
-    .\VB-Audio.ps1
-    Log "Phase Audio - Sound layer secured and synchronized."
-} catch { Fail "Phase Audio - Driver deployment failure. $_" }
+    Log "VB-Audio Virtual Cable (~120s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/VB-Audio.ps1" -OutFile "VB-Audio.ps1" -TimeoutSec 120
+    & .\VB-Audio.ps1
+    Log "Audio - Synchronized."
+} catch { Fail "Audio failed: $($_.Exception.Message)" }
 
 try {
-    Log "Phase GCRD - Preflight initiation (~120s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/GCRD-setup.ps1" -OutFile GCRD-setup.ps1
-    .\GCRD-setup.ps1
-    Log "Phase GCRD - Remote command channel established."
-} catch { Fail "Phase GCRD - Setup failure. $_" }
+    Log "Google CRD Setup (~120s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/GCRD-setup.ps1" -OutFile "GCRD-setup.ps1" -TimeoutSec 120
+    & .\GCRD-setup.ps1 -Code $Code -Pin $Pin -Retries $Retries
+    Log "GCRD - Remote channel established."
+} catch { Fail "GCRD failed: $($_.Exception.Message)" }
 
 # ============================================================
 # DATA VAULT
-# Establishes a local artifact sanctuary. Persistent and secure.
+# Persistent storage on desktop.
 # ============================================================
 try {
     $desktopPath = [Environment]::GetFolderPath("Desktop")
     $dataFolderPath = Join-Path $desktopPath "Data"
-
     if (-not (Test-Path $dataFolderPath)) {
         New-Item -Path $dataFolderPath -ItemType Directory | Out-Null
-        Log "Vault - Created tactical data sanctuary at $dataFolderPath"
+        Log "Vault - Created at $dataFolderPath"
     } else {
-        Log "Vault - Existing artifact chamber detected."
+        Log "Vault - Already exists."
     }
-} catch { Fail "Vault - Creation anomaly. $_" }
+} catch { Fail "Vault creation failed: $($_.Exception.Message)" }
 
 # ============================================================
-# SECONDARY OPERATIONS: AUXILIARY SYSTEMS
-# Optional deployments for egress control and throughput mastery.
+# AUXILIARY SYSTEMS (Optional)
 # ============================================================
 
 try {
-    Log "Phase WARP - Engaging edge routing client (~60s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Cloudflare-WARP.ps1" -OutFile Cloudflare-WARP.ps1
-    .\Cloudflare-WARP.ps1
-    Log "Phase WARP - Edge layer operational."
-} catch { Fail "Phase WARP - Edge client failure. $_" }
+    Log "Cloudflare WARP (~60s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Cloudflare-WARP.ps1" -OutFile "Cloudflare-WARP.ps1" -TimeoutSec 120
+    & .\Cloudflare-WARP.ps1
+    Log "WARP - Edge routing active."
+} catch {
+    Log "WARP - Skipped (non-critical): $($_.Exception.Message)"
+}
 
 try {
-    Log "Phase IDM (~20s)"
-    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Download_Manager.ps1" -OutFile Download_Manager.ps1
-    .\Download_Manager.ps1
-    Log "Phase IDM - ready."
-} catch { Fail "Phase IDM - Installation failure. $_" }
+    Log "Internet Download Manager (~20s)"
+    Invoke-WebRequest "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/Download_Manager.ps1" -OutFile "Download_Manager.ps1" -TimeoutSec 120
+    & .\Download_Manager.ps1
+    Log "IDM - Ready."
+} catch {
+    Log "IDM - Skipped (non-critical): $($_.Exception.Message)"
+}
 
 # ============================================================
 # EXECUTION WINDOW
-# The Fortress remains awake for a fixed duration.
-# Temporal stability maintained through randomized pulse cycles.
+# Keep alive for ~5h 35m with randomized pulses.
 # ============================================================
 $totalMinutes = 335
-$startTime    = Get-Date
-$endTime      = $startTime.AddMinutes($totalMinutes)
+$startTime = Get-Date
+$endTime = $startTime.AddMinutes($totalMinutes)
 
 function ClampMinutes([TimeSpan]$ts) {
     $mins = [math]::Round($ts.TotalMinutes, 1)
@@ -200,25 +175,33 @@ function ClampMinutes([TimeSpan]$ts) {
     return $mins
 }
 
+Log "Execution window: ${totalMinutes} minutes. Entering sustain mode."
+
 while ((Get-Date) -lt $endTime) {
-    $now       = Get-Date
-    $elapsed   = [math]::Round(($now - $startTime).TotalMinutes, 1)
+    $now = Get-Date
+    $elapsed = [math]::Round(($now - $startTime).TotalMinutes, 1)
     $remaining = ClampMinutes ($endTime - $now)
-    Log "Window - Operational Uptime ${elapsed}m | Remaining ${remaining}m"
-    Start-Sleep -Seconds ((Get-Random -Minimum 300 -Maximum 800))
+    Log "Uptime: ${elapsed}m | Remaining: ${remaining}m"
+    Start-Sleep -Seconds (Get-Random -Minimum 300 -Maximum 800)
 }
 
-Log "Window - Mission duration ${totalMinutes}m achieved. Preparing for decommission."
+Log "Mission duration ${totalMinutes}m achieved. Decommissioning."
 
 # ============================================================
 # TERMINATION SEQUENCE
-# Controlled power-down or release of command chain.
+# Graceful exit or forced shutdown.
 # ============================================================
-Log "Decommission - Initiating final shutdown protocol."
+Log "Initiating final shutdown protocol."
 
-if ($RUNNER_ENV -eq "self-hosted") {
+# Only self-hosted runners can shutdown
+if ($env:RUNNER_ENV -eq "self-hosted") {
+    Log "Self-hosted environment detected. Forcing shutdown."
     Stop-Computer -Force
 } else {
-    Log "Decommission - Hosted environment detected. Exiting gracefully."
-    Exit
+    Log "GitHub-hosted runner. Exiting gracefully."
+    Exit 0
 }
+
+# ============================================================
+# END OF PROTOCOL
+# ============================================================
