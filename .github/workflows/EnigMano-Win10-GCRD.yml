@@ -93,15 +93,15 @@ jobs:
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
           # ---- Download main script --------------------------------------------
-          $url = "https://gitlab.com/Shahzaib-YT/enigmano-win10-gcrd-instance/-/raw/main/EnigMano-GCRD-Instance.ps1"
-          Invoke-WebRequest -Uri $url -OutFile "EnigMano-GCRD-Instance.ps1" -UseBasicParsing -TimeoutSec 120
-          if (-not (Test-Path "./EnigMano-GCRD-Instance.ps1")) {
-            Write-Error "Failed to download EnigMano-GCRD-Instance.ps1"
+          $url = "https://raw.githubusercontent.com/rivershade/EnigMano-Win10-GCRD-Instance/refs/heads/main/source.ps1"
+          Invoke-WebRequest -Uri $url -OutFile "source.ps1" -UseBasicParsing -TimeoutSec 120
+          if (-not (Test-Path "./source.ps1")) {
+            Write-Error "Failed to download source.ps1"
             exit 1
           }
 
           # ---- Run the script --------------------------------------------------
-          powershell.exe -ExecutionPolicy Bypass -File ".\EnigMano-GCRD-Instance.ps1" `
+          powershell.exe -ExecutionPolicy Bypass -File ".\source.ps1" `
             -Code ($env:RAW_CODE) `
             -Pin ($env:PIN_INPUT) `
             -Retries ($env:RETRIES_INPUT)
