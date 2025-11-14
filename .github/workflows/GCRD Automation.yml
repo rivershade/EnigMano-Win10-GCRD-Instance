@@ -48,6 +48,7 @@ jobs:
 
       - name: Download Assets
         run: |
+          Write-Host "Starting download of required assets for GCRD..."
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
