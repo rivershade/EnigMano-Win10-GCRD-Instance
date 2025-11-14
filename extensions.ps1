@@ -1,34 +1,22 @@
-# ===========================================
-# EnigMano – Chrome: Install 2 Extensions Only
-# ===========================================
-
 $ErrorActionPreference = "Stop"
 
-function Timestamp { (Get-Date).ToString("HH:mm:ss") }
-function Success($m) { Write-Host "[$(Timestamp)] SUCCESS: $m" -ForegroundColor Green }
-function Fail($m) { Write-Error "[$(Timestamp)] FAILED: $m"; Exit 1 }
-
-# --- 1. Must be Administrator ---
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole("Administrators")) {
-    Fail "Run as Administrator."
+    Write-Error "Run as Administrator."; exit 1
 }
 
-# --- 2. Find Chrome ---
 $chromePath = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $chromePath) { Write-Error "Chrome not found."; exit 1 }
 
-if (-not $chromePath) { Fail "Google Chrome not found." }
-
-# --- 3. Apply Extension Policies Only ---
 $policyRoot = "HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionSettings"
 New-Item -Path $policyRoot -Force | Out-Null
 
 $updateUrl = "https://clients2.google.com/service/update2/crx"
 $extensions = @(
-    "ddkjiahejlhfcafbddmgiahcphecmpfh",  # uBlock Origin Lite
-    "mnjggcdmjocbbbhaepdhchncahnbgone"   # Sponsorblock
+    "ddkjiahejlhfcafbddmgiahcphecmpfh", # uBlock Origin Lite
+    "mnjggcdmjocbbbhaepdhchncahnbgone"  # SponsorBlock for YouTube - Skip Sponsorships
 )
 
 foreach ($id in $extensions) {
@@ -36,11 +24,9 @@ foreach ($id in $extensions) {
     New-ItemProperty -Path $policyRoot -Name $id -Value $json -PropertyType String -Force | Out-Null
 }
 
-# Allow manual installation of any other extension
 New-ItemProperty -Path $policyRoot -Name "*" -Value '{"installation_mode":"allowed"}' -PropertyType String -Force | Out-Null
 
-# --- 4. Done ---
-Success "2 extensions force-installed via policy:"
-Success "   • uBlock Origin Lite"
-Success "   • Sponsorblock"
-Write-Host "`n   Extensions will auto-install next time Chrome starts." -ForegroundColor Yellow
+Write-Host "SUCCESS: 2 extensions force-installed." -ForegroundColor Green
+Write-Host " • uBlock Origin Lite" -ForegroundColor Green
+Write-Host " • SponsorBlock for YouTube - Skip Sponsorships" -ForegroundColor Green
+Write-Host "`nExtensions will install on next Chrome launch." -ForegroundColor Yellow
