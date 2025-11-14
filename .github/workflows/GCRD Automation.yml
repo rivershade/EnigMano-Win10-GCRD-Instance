@@ -12,6 +12,7 @@ on:
         default: ""
       RETRIES:
         description: "Retries"
+        required: false
         default: "3"
 
 permissions:
@@ -21,31 +22,26 @@ jobs:
   gcrd-register:
     name: GCRD Register
     runs-on: windows-2022
+    env:
+      RAW_CODE: ${{ github.event.inputs.CODE }}
+      PIN_INPUT: ${{ github.event.inputs.PIN != '' && github.event.inputs.PIN || secrets.PIN }}
+      RETRIES_INPUT: ${{ github.event.inputs.RETRIES }}
     defaults:
       run:
         shell: pwsh
     steps:
-      - name: Set Environment Variables
-        run: |
-          $pinInput = "${{ github.event.inputs.PIN }}"
-          if ([string]::IsNullOrWhiteSpace($pinInput)) {
-              $pinInput = "${{ secrets.PIN }}"
-          }
-          Write-Host "RAW_CODE=${{ github.event.inputs.CODE }}" >> $env:GITHUB_ENV
-          Write-Host "PIN_INPUT=$pinInput" >> $env:GITHUB_ENV
-          Write-Host "RETRIES_INPUT=${{ github.event.inputs.RETRIES }}" >> $env:GITHUB_ENV
-
       - name: Validate PIN
         run: |
-          $pin = "$env:PIN_INPUT"
+          $pin = "${{ env.PIN_INPUT }}"
+
           if ([string]::IsNullOrWhiteSpace($pin)) {
-              Write-Error "No PIN provided. Set the repository secret 'PIN' or provide a PIN in the workflow dispatch input."
-              exit 1
+            Write-Error "No PIN provided. Set the repository secret 'PIN' or provide a PIN in the workflow dispatch input."
+            exit 1
           }
 
           if ($pin.Length -lt 6 -or -not ($pin -match '^\d+$')) {
-              Write-Error "Invalid PIN. It must be at least 6 digits and numeric only."
-              exit 1
+            Write-Error "Invalid PIN. It must be at least 6 digits and numeric only."
+            exit 1
           }
 
           Write-Host "PIN is set and valid."
